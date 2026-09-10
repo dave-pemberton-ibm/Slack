@@ -1,0 +1,95 @@
+interface slack
+service sendToSlack (
+    input {
+        String message;
+        String slackWebhookURL;
+    }
+    output {
+        String status;
+    }
+)
+properties {
+    favorite: false;
+    deprecated: false;
+    visible: private;
+    reuse: private;
+    stateless: true;
+    cacheResults: false;
+    cacheExpire: 15;
+    prefetch: false;
+    prefetchActivation: 1;
+    pipelineDebug: None;
+    allowedHttpMethods: [TRACE, HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH];
+    maxRetryAttempts: 0;
+    retryInterval: 0;
+    enableAuditing: never;
+    logOn: Error only;
+    includePipeline: never;
+    circuitBreakerEnabled: false;
+    failureEvent: Exception only;
+    timeoutPeriod: 60;
+    cancelThreadOnTimeout: false;
+    failureThreshold: 5;
+    failurePeriod: 60;
+    circuitOpenAction: Throw exception;
+    circuitResetPeriod: 300;
+    concurrencyEnabled: false;
+    maxConcurrentRequests: 20;
+    validateInput: false;
+    validateOutput: false;
+}
+{
+    MAP {
+        mapTarget {
+            String slackMessage;
+        }
+        set (variable) `slackMessage` = {`text`:"%message%"};
+        drop `message`;
+    }
+    MAP {
+        mapTarget {
+            record headers {
+                allowUnspecifiedFields: true;
+            } {
+                String content-type;
+            };
+        }
+        set `headers`/`content-type` = "application/json";
+    }
+    INVOKE pub.client:http {
+        validateInput: false
+        validateOutput: false
+        input {
+            set `method` = "post";
+            set `loadAs` = "stream";
+            copy `slackWebhookURL` -> `url`;
+        }
+    }
+    IF (header/status!="200") {
+        MAP {
+            mapTarget {
+                String status;
+            }
+            set `status` = "Error sending message";
+        }
+    } ELSE {
+        MAP {
+            mapTarget {
+                String status;
+            }
+            set `status` = "success";
+        }
+    }
+    MAP {
+        drop `url`;
+        drop `method`;
+        drop `loadAs`;
+        drop `data`;
+        drop `slackWebhookURL`;
+        drop `slackMessage`;
+        drop `headers`;
+        drop `encodedURL`;
+        drop `header`;
+        drop `body`;
+    }
+}
