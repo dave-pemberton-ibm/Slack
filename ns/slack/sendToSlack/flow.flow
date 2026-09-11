@@ -40,11 +40,45 @@ properties {
 }
 {
     MAP {
-        mapTarget {
-            String slackMessage;
+        TRANSFORM pub.string:concat {
+            invoke-order: 0
+            validateInput: false
+            validateOutput: false
+            input {
+                mapTarget {
+                    String inString1;
+                    String inString2;
+                }
+                set `inString1` = "{\"text\":\"";
+                copy `message` -> `inString2`;
+            }
+            output {
+                mapTarget {
+                    String message;
+                }
+                copy `value` -> `message`;
+            }
         }
-        set (variable) `slackMessage` = {`text`:"%message%"};
-        drop `message`;
+    }
+    MAP {
+        TRANSFORM pub.string:concat {
+            invoke-order: 0
+            validateInput: false
+            validateOutput: false
+            input {
+                mapTarget {
+                    String inString1;
+                }
+                copy `message` -> `inString1`;
+                set `inString2` = "\"}";
+            }
+            output {
+                mapTarget {
+                    String message;
+                }
+                copy `value` -> `message`;
+            }
+        }
     }
     MAP {
         mapTarget {
@@ -63,6 +97,7 @@ properties {
             set `method` = "post";
             set `loadAs` = "stream";
             copy `slackWebhookURL` -> `url`;
+            copy `message` -> `data`/`string`;
         }
     }
     IF (header/status!="200") {
